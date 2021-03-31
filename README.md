@@ -1,4 +1,4 @@
-# SharePoint.TranslateT
+# SharePoint.Translate
 This is still being tested and its considered beta. Use and improve as much as you would like and at your own risk.
 
 ## What is it
@@ -22,6 +22,7 @@ More details on that:
 https://support.microsoft.com/en-us/office/create-multilingual-communication-sites-pages-and-news-2bb7d610-5453-41c6-a0e8-6f40b3ed750c
 
 Example:
+
 $global:apikey='12345 API Key you got from Azure Cognitive Services'
 $Languages=@('fr';'es';'it';'de','pt-br','nl','fi','pl','sv','vi','zh-chs')
 New-SharePointTranslation -$SharePointSite 'https://cyz.sharepoint.com/sites/MySite' -Languages $Languages -$PageToTranslate 'MyPage.aspx'
