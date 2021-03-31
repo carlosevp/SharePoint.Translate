@@ -24,8 +24,11 @@ https://support.microsoft.com/en-us/office/create-multilingual-communication-sit
 Example:
 
 $global:apikey='12345 API Key you got from Azure Cognitive Services'
+
 $Languages=@('fr';'es';'it';'de','pt-br','nl','fi','pl','sv','vi','zh-chs')
+
 New-SharePointTranslation -$SharePointSite 'https://cyz.sharepoint.com/sites/MySite' -Languages $Languages -$PageToTranslate 'MyPage.aspx'
+
 
 Post Validation:
 Open each translated page for a quick validation that it looks OK. Common issues are usually related to special text formatting (Bold, Italic, Links, etc). 
