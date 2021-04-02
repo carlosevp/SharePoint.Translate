@@ -15,7 +15,8 @@ Had to go with PowerShell because in my case there are Conditional Access Polici
 ## Pre-requisites
 User running the script must have Site Owners permission to be able to create the new pages.
 PnP.PowerShell module must be installed.
-``` Install-Module PnP.PowerShell 
+``` 
+    Install-Module PnP.PowerShell 
     Install-Module SharePoint.Translate
 ``` 
 
