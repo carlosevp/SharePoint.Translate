@@ -10,14 +10,14 @@ Go here and grab your free API key: https://azure.microsoft.com/en-us/services/c
 Idea was inspired by this post:
 https://michalsacewicz.com/automatically-translate-news-on-multilingual-sharepoint-sites/
 
-And PowerShell translation function was found in Reddit - I didnt want to reinvent the wheel.
-
 Had to go with PowerShell because in my case there are Conditional Access Policies requiring MFA to talk to SharePoint.
 
 ## Pre-requisites
 User running the script must have Site Owners permission to be able to create the new pages.
 PnP.PowerShell module must be installed.
-``` Install-Module PnP.PowerShell ``` 
+``` Install-Module PnP.PowerShell 
+    Install-Module SharePoint.Translate
+``` 
 
 ## How to Use
 Pretty easy - after you created your initial page and choose to generate all translations (which just stages a new file without translation)
@@ -29,11 +29,13 @@ https://support.microsoft.com/en-us/office/create-multilingual-communication-sit
 Example:
 ```powershell
 
-$global:apikey='12345 API Key you got from Azure Cognitive Services'
+$apikey='12345 API Key you got from Azure Cognitive Services'
 
 $Languages=@('fr';'es';'it';'de','pt-br','nl','fi','pl','sv','vi','zh-chs')
 
-New-SharePointTranslation -$SharePointSite 'https://cyz.sharepoint.com/sites/MySite' -Languages $Languages -$PageToTranslate 'MyPage.aspx'
+$SharePointSite='https://cyz.sharepoint.com/sites/MySite'
+
+New-SharePointTranslation -$SharePointSite $SharePointSite -Languages $Languages -$PageToTranslate 'MyPage.aspx' -APIKey $APIKey
 ```
 
 Post Validation:
