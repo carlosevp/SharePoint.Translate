@@ -143,6 +143,50 @@ return $Translation
 }
 
 
+# Translate function
+function Start-Translation{
+    param(
+    [Parameter(Mandatory=$true)]
+    [string]$Text,
+
+    [Parameter(Mandatory=$true)]
+    [string]$Language,
+
+    [Parameter(Mandatory=$false)]
+    [string]$apiKey,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$fromLang='en'
+
+    )
+ 
+    $baseUri = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0"
+ 
+    if($Language -eq 'zh-cns') {$Language='zh-CN'}
+    if($Language -eq 'pt-br') {$Language='pt'}
+    
+    $headers = @{}
+    $headers.Add("Ocp-Apim-Subscription-Key",$apiKey)
+    $headers.Add("Content-Type","application/json")
+    $headers.Add("Ocp-Apim-Subscription-Region","eastus2")
+    # Conversion URI
+    $convertURI = "$($baseURI)&from=$($fromLang)&to=$($Language)&textType=html"
+ 
+    # Create JSON array with 1 object for request body
+    $textJson = @{
+        "Text" = $text
+        } | ConvertTo-Json
+ 
+    $body = "[$textJson]"
+ 
+    # Uri for the request includes language code and text type, which is always html for SharePoint text web parts
+    #$uri = "$baseUri&amp;to=$language&amp;textType=html"
+ 
+    # Send request for translation and extract translated text
+    $results = Invoke-RestMethod -Method Post -Uri $convertURI -Headers $headers -Body $body
+    $translatedText = $results[0].translations[0].text
+    return $translatedText
+}
 
 Function New-SharePointTranslation{
  <#
@@ -167,24 +211,28 @@ Function New-SharePointTranslation{
     [CmdletBinding()]
     param (
            [Parameter(Mandatory=$false)]
-           [string]$SharePointSite=$SiteURL,
+           [string]$SharePointSite,
 
            [Parameter(Mandatory=$false)]
-           [array]$Languages=$Languages,
+           [array]$Languages,
 
            [Parameter(Mandatory=$false)]
-           [array]$Credential=$Credential,
+           [pscredential]$Credential,
 
            [Parameter(Mandatory=$false)]
-           [string]$PageToTranslate=$PageToTranslate
+           [string]$PageToTranslate=$PageToTranslate,
+
+           [Parameter(Mandatory=$false)]
+           [string]$APIKey
 
     )
 
 
+
 # Lets connect to SharePoint - it will prompt for authentication if no Credential was provided.
 # Interactive policies where MFA is required with Conditional Access cant use Credential as parameters.
-If (!$Credential) { $Connection=Connect-PNPOnline -Url $SiteURL -Interactive }
-Else {$Connection=Connect-PNPOnline -Url $SiteURL -Credentials $Credential}
+If (!$Credential) { $Connection=Connect-PNPOnline -Url $SharePointSite -Interactive }
+Else {$Connection=Connect-PNPOnline -Url $SharePointSite -Credentials $Credential}
 
 $Page = Get-PnPClientSidePage $PageToTranslate # "$targetLanguage/$pageTitle.aspx"
 #$textControls = $Page.Controls | Where-Object {$_.Type.Name -eq "ClientSideText"}
@@ -197,15 +245,16 @@ Write-Host "Translating content..." -NoNewline
     $NewPage=Get-PnPClientSidePage "$($Language)-$($PageToTranslate)"
     
     # Translate the Title first
-    $translatedTitleText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $Page.PageTitle
-    Set-PnPPage -Identity $NewPage -Title $translatedTitleText -Name "$($Language)-$($PageToTranslate)" 
+    #$translatedTitleText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $Page.PageTitle
+    $translatedTitleText = Start-Translation -Language $Language -Text $Page.PageTitle -APIKey $APIKey
+    $return=Set-PnPPage -Identity $NewPage -Title $translatedTitleText -Name "$($Language)-$($PageToTranslate)" 
 
     foreach ($textControl in $textControls){
         #$translatedControlText = Start-Translation -text $textControl.Text -language $targetLanguage
         # Lets clean up some unwanted characters from the text control before translating.
         $textControl.Text=$textControl.Text.replace('&nbsp;','')
-        $translatedControlText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $textControl.Text
-               
+        #$translatedControlText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $textControl.Text
+        $translatedControlText=Start-Translation -Language $Language -Text $textControl.Text -APIKey $APIKey       
        # $NewPage=Get-PnPClientSidePage "$($Language)-$($PageToTranslate)"
 
         # Translate the Title first
@@ -213,7 +262,7 @@ Write-Host "Translating content..." -NoNewline
         #Set-PnPPage -Identity $NewPage -Title $translatedTitleText -Name "$($Language)-$($PageToTranslate)" 
 
         #Set-PnPClientSideText -Page $NewPage -InstanceId $textControl.InstanceId -Text $translatedControlText
-        Set-PnPPageTextPart -Page $NewPage -InstanceId $textControl.InstanceId -Text $translatedControlText
+        $return=Set-PnPPageTextPart -Page $NewPage -InstanceId $textControl.InstanceId -Text $translatedControlText
 
     }
     # Now that we are done with translation, copy the files a to language folder, and delete temporary file.
