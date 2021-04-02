@@ -14,6 +14,11 @@ And PowerShell translation function was found in Reddit - I didnt want to reinve
 
 Had to go with PowerShell because in my case there are Conditional Access Policies requiring MFA to talk to SharePoint.
 
+## Pre-requisites
+User running the script must have Site Owners permission to be able to create the new pages.
+PnP.PowerShell module must be installed.
+``` Install-Module PnP.PowerShell ``` 
+
 ## How to Use
 Pretty easy - after you created your initial page and choose to generate all translations (which just stages a new file without translation)
 you can use this script to automatically create all required translated files. 
