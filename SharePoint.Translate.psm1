@@ -240,14 +240,20 @@ $textControls = $Page.Controls | Where-Object {$_.Type.Name -eq "PageText"}
  
 Write-Host "Translating content..." -NoNewline
  foreach ($Language in $Languages) {
-
-    Copy-PnPFile -SourceUrl "SitePages/$($PageToTranslate)" -TargetUrl "SitePages/$($Language)-$($PageToTranslate)" -Overwrite -Force
-    $NewPage=Get-PnPClientSidePage "$($Language)-$($PageToTranslate)"
+    # Create a temporary copy of the translated version of the page
+    Try{
+    Copy-PnPFile -SourceUrl "SitePages/$($Language)/$($PageToTranslate)" -TargetUrl "SitePages/tmp-$($Language)-$($PageToTranslate)" -Overwrite -Force -ErrorAction Stop
+    $NewPage=Get-PnPClientSidePage "tmp-$($Language)-$($PageToTranslate)"
+    } Catch {
+       # throw "There is no translation file available! Please go back on the Page and create a new Translation for the selected Language: $($PageToTranslate) "
+       write-host -BackgroundColor Yellow -ForegroundColor Red "There is no translation file available! Please go back on the Page and create a new Translation for the selected Language: $($Language) "
+       Break
+    }
     
     # Translate the Title first
     #$translatedTitleText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $Page.PageTitle
     $translatedTitleText = Start-Translation -Language $Language -Text $Page.PageTitle -APIKey $APIKey
-    $return=Set-PnPPage -Identity $NewPage -Title $translatedTitleText -Name "$($Language)-$($PageToTranslate)" 
+    $return=Set-PnPPage -Identity $NewPage -Title $translatedTitleText -Name "tmp-$($Language)-$($PageToTranslate)" 
 
     foreach ($textControl in $textControls){
         #$translatedControlText = Start-Translation -text $textControl.Text -language $targetLanguage
@@ -267,11 +273,13 @@ Write-Host "Translating content..." -NoNewline
     }
     # Now that we are done with translation, copy the files a to language folder, and delete temporary file.
     #Pause
-    Copy-PnPFile -SourceUrl "SitePages/$($Language)-$($PageToTranslate)" -TargetUrl "SitePages/$($Language)/$($PageToTranslate)" -Overwrite -Force
-    Remove-PnPFile -SiteRelativeUrl  "SitePages/$($Language)-$($PageToTranslate)" -Force
+    #Copy-PnPFile -SourceUrl "SitePages/$($Language)-$($PageToTranslate)" -TargetUrl "SitePages/$($Language)/$($PageToTranslate)" -Overwrite -Force
+    Copy-PnPFile -SourceUrl "SitePages/tmp-$($Language)-$($PageToTranslate)" -TargetUrl "SitePages/$($Language)/$($PageToTranslate)" -Overwrite -Force
+    Remove-PnPFile -SiteRelativeUrl  "SitePages/tmp-$($Language)-$($PageToTranslate)" -Force
     
 }
 Write-Host "Translation completed, please review." 
 
 }
+
 
