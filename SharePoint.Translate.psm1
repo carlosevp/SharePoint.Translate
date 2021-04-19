@@ -172,6 +172,12 @@ function Start-Translation{
     # Conversion URI
     $convertURI = "$($baseURI)&from=$($fromLang)&to=$($Language)&textType=html"
  
+    # Clean up unsupported characters that return {"error":{"code":400000,"message":"One of the request inputs is not valid."}}
+    $text=$text.Replace(' "',' ')
+    $text=$text.Replace('" ',' ') 
+    $text=$text.Replace('\ r',' ')
+    $text=$text.Replace('\ n',' ') 
+
     # Create JSON array with 1 object for request body
     $textJson = @{
         "Text" = $text
