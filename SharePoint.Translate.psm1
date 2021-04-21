@@ -173,10 +173,7 @@ function Start-Translation{
     $convertURI = "$($baseURI)&from=$($fromLang)&to=$($Language)&textType=html"
  
     # Clean up unsupported characters that return {"error":{"code":400000,"message":"One of the request inputs is not valid."}}
-    $text=$text.Replace(' "',' ')
-    $text=$text.Replace('" ',' ') 
-    $text=$text.Replace('\ r',' ')
-    $text=$text.Replace('\ n',' ') 
+    $text=$text -replace "[^ -x7e]"," "
 
     # Create JSON array with 1 object for request body
     $textJson = @{
@@ -209,10 +206,13 @@ Function New-SharePointTranslation{
             Array of Languages to translate the text to. Source must be in english.
 
          .PARAMETER PageToTranslate
-            Name of the SharePoint Page to be translated.       
+            Name of the SharePoint Page to be translated.    
+            
+         .PARAMETER APIKey
+            Azure Translation API Key. Get yours for free at https://azure.microsoft.com/en-us/free/cognitive-services/
 
         .EXAMPLE
-           Translate-SWPage -SharePointSite LearningPathway -Languages @('es','fr') -Page ThisPage.aspx
+            New-SharePointTranslation -SharePointSite https://xxx.sharepoint.com/sites/XYZ -Languages @('es','fr') -Page ThisPage.aspx -APIKey $APIKey
     #>
     [CmdletBinding()]
     param (
@@ -237,13 +237,24 @@ Function New-SharePointTranslation{
 
 # Lets connect to SharePoint - it will prompt for authentication if no Credential was provided.
 # Interactive policies where MFA is required with Conditional Access cant use Credential as parameters.
-If (!$Credential) { $Connection=Connect-PNPOnline -Url $SharePointSite -Interactive }
-Else {$Connection=Connect-PNPOnline -Url $SharePointSite -Credentials $Credential}
+Try{
+    If (!$Credential) { $Connection=Connect-PNPOnline -Url $SharePointSite -Interactive }
+    Else {$Connection=Connect-PNPOnline -Url $SharePointSite -Credentials $Credential}
+    } Catch{
+    Write-Warning -Message "Could not connect to SharePoint! Make sure you have owner rights to the Site!"
+    Write-Warning -Message "Details: $_"
+    Break
+}
 
+Try{
 $Page = Get-PnPClientSidePage $PageToTranslate # "$targetLanguage/$pageTitle.aspx"
 #$textControls = $Page.Controls | Where-Object {$_.Type.Name -eq "ClientSideText"}
 $textControls = $Page.Controls | Where-Object {$_.Type.Name -eq "PageText"}
- 
+} Catch {
+    Write-Warning -Message "Could not find the Page - Aborting"
+    Write-Warning -Message "Details: $_"
+    Break
+}
 Write-Host "Translating content..." -NoNewline
  foreach ($Language in $Languages) {
     # Create a temporary copy of the translated version of the page
@@ -252,7 +263,7 @@ Write-Host "Translating content..." -NoNewline
     $NewPage=Get-PnPClientSidePage "tmp-$($Language)-$($PageToTranslate)"
     } Catch {
        # throw "There is no translation file available! Please go back on the Page and create a new Translation for the selected Language: $($PageToTranslate) "
-       write-host -BackgroundColor Yellow -ForegroundColor Red "There is no translation file available! Please go back on the Page and create a new Translation for the selected Language: $($Language) "
+       Write-Warning -Message "There is no translation file available! Please go back on the Page and create a new Translation for the selected Language: $($Language) "
        Break
     }
     
@@ -264,7 +275,7 @@ Write-Host "Translating content..." -NoNewline
     foreach ($textControl in $textControls){
         #$translatedControlText = Start-Translation -text $textControl.Text -language $targetLanguage
         # Lets clean up some unwanted characters from the text control before translating.
-        $textControl.Text=$textControl.Text.replace('&nbsp;','')
+        #$textControl.Text=$textControl.Text.replace('&nbsp;','')
         #$translatedControlText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $textControl.Text
         $translatedControlText=Start-Translation -Language $Language -Text $textControl.Text -APIKey $APIKey       
        # $NewPage=Get-PnPClientSidePage "$($Language)-$($PageToTranslate)"
