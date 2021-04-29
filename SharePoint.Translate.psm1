@@ -277,6 +277,7 @@ Write-Host "Translating content..." -NoNewline
         # Lets clean up some unwanted characters from the text control before translating.
         #$textControl.Text=$textControl.Text.replace('&nbsp;','')
         #$translatedControlText = ConvertTo-AnotherLanguage -TargetLanguage $Language -textToConvert $textControl.Text
+        Try{
         $translatedControlText=Start-Translation -Language $Language -Text $textControl.Text -APIKey $APIKey       
        # $NewPage=Get-PnPClientSidePage "$($Language)-$($PageToTranslate)"
 
@@ -286,7 +287,13 @@ Write-Host "Translating content..." -NoNewline
 
         #Set-PnPClientSideText -Page $NewPage -InstanceId $textControl.InstanceId -Text $translatedControlText
         $return=Set-PnPPageTextPart -Page $NewPage -InstanceId $textControl.InstanceId -Text $translatedControlText
-
+        } Catch{
+            Write-Warning -Message "Could not translate to $($Language)"
+            write-warning "Total text lenght is $($textControl.Text.Length)"
+            Write-Warning -Message "Original text: $($textControl.Text)"
+            Start-Process "https://docs.microsoft.com/en-us/azure/cognitive-services/translator/request-limits"
+            throw $_
+        }
     }
     # Now that we are done with translation, copy the files a to language folder, and delete temporary file.
     #Pause
